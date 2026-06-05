@@ -9,12 +9,12 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Added your specific Vercel deployment URL to the VIP list
+# Standard list for localhost and your exact known URLs
 allowed_origins = [
-    "http://localhost:5173",  # Vite local fallback
-    "http://localhost:3000",  # Create React App local fallback
-    "https://trip-macha.vercel.app",       # Your main domain
-    "https://trip-macha-q5j5.vercel.app"   # Your exact Vercel deployment URL
+    "http://localhost:5173",  
+    "http://localhost:3000",  
+    "https://trip-macha.vercel.app",       
+    "https://trip-macha-q5j5.vercel.app"   
 ]
 
 FRONTEND_URL = os.getenv("FRONTEND_URL")
@@ -24,6 +24,7 @@ if FRONTEND_URL and FRONTEND_URL not in allowed_origins:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=r"https://.*.vercel.app", # <--- THE MAGIC BULLET (Allows all Vercel preview links)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
