@@ -9,13 +9,12 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# 1. HARDCODE YOUR VERCEL URL HERE FOR NOW
-# Relying on os.getenv() for the frontend URL can be tricky during local Docker testing 
-# if the .env file isn't perfectly mapped. Hardcoding it guarantees it works right now.
+# Added your specific Vercel deployment URL to the VIP list
 allowed_origins = [
     "http://localhost:5173",  # Vite local fallback
     "http://localhost:3000",  # Create React App local fallback
-    "https://trip-macha.vercel.app", # <--- REPLACE WITH YOUR EXACT VERCEL URL
+    "https://trip-macha.vercel.app",       # Your main domain
+    "https://trip-macha-q5j5.vercel.app"   # Your exact Vercel deployment URL
 ]
 
 FRONTEND_URL = os.getenv("FRONTEND_URL")
@@ -30,10 +29,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 2. WATCH YOUR ROUTE PREFIXES!
-# Your JavaScript frontend is trying to call: /api/plan-trip
-# If we leave prefix="/api/chat", your backend will only listen at: /api/chat/plan-trip
-# I have changed the prefix to "/api" so it matches your frontend exactly.
 app.include_router(routes_chat.router, prefix="/api", tags=["AI Co-Pilot"])
 app.include_router(routes_scraping.router, prefix="/api", tags=["Task Queue"])
 
