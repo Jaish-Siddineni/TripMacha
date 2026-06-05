@@ -1,7 +1,9 @@
 import axios from 'axios';
 
-// Pointing to your local machine running the FastAPI server
-const API_BASE_URL = 'http://localhost:8000/api';
+// Dynamically sets the base URL based on your deployment environment (.env file)
+// Falls back to localhost:8000 if no environment variable is found
+const BASE_HOST = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = `${BASE_HOST}/api`;
 
 export const travelApi = {
   /**
@@ -25,7 +27,12 @@ export const travelApi = {
    * Polls the backend to check if the background scrapers are finished.
    */
   checkScraperStatus: async (taskId) => {
-    const response = await axios.get(`${API_BASE_URL}/status/${taskId}`);
-    return response.data;
+    try {
+      const response = await axios.get(`${API_BASE_URL}/status/${taskId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Status Check Error:", error);
+      throw error;
+    }
   }
 };

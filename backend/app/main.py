@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import routes_chat, routes_scraping
@@ -8,10 +9,21 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Crucial for local development: allows React (port 5173) to talk to FastAPI (port 8000)
+# Fetch allowed origins from system environment variables
+# In production, this will be your deployed frontend URL (e.g., https://tripmacha.vercel.app)
+allowed_origins = [
+    "http://localhost:5173",  # Vite local fallback
+    "http://localhost:3000",  # Create React App local fallback
+]
+
+# If a production frontend URL environment variable is set, append it dynamically
+FRONTEND_URL = os.getenv("FRONTEND_URL")
+if FRONTEND_URL:
+    allowed_origins.append(FRONTEND_URL)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"], 
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -5,9 +5,13 @@ import HybridPlanner from './pages/HybridPlanner';
 export default function App() {
   const [activeWorkspace, setActiveWorkspace] = useState(false);
 
-  return activeWorkspace ? (
-    <HybridPlanner />
-  ) : (
-    <LandingPage onStart={() => setActiveWorkspace(true)} />
+  return (
+    <main className="w-full min-h-screen bg-slate-50 overflow-x-hidden">
+      {activeWorkspace ? (
+        <HybridPlanner />
+      ) : (
+        <LandingPage onStart={() => setActiveWorkspace(true)} />
+      )}
+    </main>
   );
 }

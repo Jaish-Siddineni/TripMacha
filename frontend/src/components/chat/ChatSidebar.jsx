@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Send, Map, Calendar, Plane, Sparkles } from 'lucide-react';
 
-export default function ChatSidebar() {
+// 1. Added the onDataScraped prop so it can send data to the parent!
+export default function ChatSidebar({ onDataScraped }) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([
     { role: 'assistant', text: 'Namaskara! I am your AI Travel Co-Pilot. Where are we heading in India today?' }
@@ -13,15 +14,15 @@ export default function ChatSidebar() {
     
     const userMessage = input;
     
-    // 1. Instantly show user message
+    // Instantly show user message
     setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
     setInput('');
     
-    // 2. Add temporary loading bubble
+    // Add temporary loading bubble
     setMessages(prev => [...prev, { role: 'assistant', text: 'Processing your request...' }]);
 
     try {
-      // 3. Connect to the FastAPI Chat Router
+      // Connect to the FastAPI Chat Router
       const chatResponse = await fetch("http://localhost:8000/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -30,14 +31,16 @@ export default function ChatSidebar() {
       
       const chatData = await chatResponse.json();
       
+      // Update the message bubble with the structured chat itinerary reply from the AI
       setMessages(prev => {
         const updated = [...prev];
-        updated[updated.length - 1] = { role: 'assistant', text: chatData.response || 'Scanning live travel options now...' };
+        updated[updated.length - 1] = { role: 'assistant', text: chatData.chat_reply || 'Scanning live travel options now...' };
         return updated;
       });
 
-      // 4. Trigger the background Scraper Array
-     const scrapeResponse = await fetch(`http://localhost:8000/api/scrape/trigger-flight-search?destination=DEL&date=2026-06-15`, { 
+      // Trigger the background Scraper Array using AI-extracted parameters
+      console.log(`Forwarding extracted intent to scraper: ${chatData.airport_code} for date ${chatData.search_date}`);
+      const scrapeResponse = await fetch(`http://localhost:8000/api/scrape/trigger-flight-search?destination=${encodeURIComponent(chatData.airport_code)}&date=${encodeURIComponent(chatData.search_date)}`, { 
         method: "POST",
         headers: { "Content-Type": "application/json" }
       });
@@ -45,7 +48,7 @@ export default function ChatSidebar() {
       const taskData = await scrapeResponse.json();
       console.log("Background Scraper Task ID:", taskData.task_id);
 
-      // 5. THE POLLING LOOP (Checks the backend every 3 seconds)
+      // THE POLLING LOOP (Checks the backend every 3 seconds)
       const checkStatus = setInterval(async () => {
         try {
           const statusRes = await fetch(`http://localhost:8000/api/scrape/status/${taskData.task_id}`);
@@ -55,6 +58,13 @@ export default function ChatSidebar() {
             // STOP the loop! The data is ready.
             clearInterval(checkStatus); 
             console.log("Scraping finished!", statusData.data);
+            
+            // 2. THIS IS THE MAGIC BRIDGE! Push the data up to HybridPlanner
+            if (onDataScraped) {
+                // Ensure it's passed as a clean Javascript Object, not a raw JSON string
+                const parsedData = typeof statusData.data === 'string' ? JSON.parse(statusData.data) : statusData.data;
+                onDataScraped(parsedData);
+            }
             
             setMessages(prev => [...prev, { 
               role: 'assistant', 
@@ -71,7 +81,6 @@ export default function ChatSidebar() {
               text: 'Looks like the scraper ran into an issue connecting to the airlines. Please try again.' 
             }]);
           }
-          // If status is "running", it simply does nothing and checks again in 3 seconds.
         } catch (err) {
           console.error("Polling connection error:", err);
         }
@@ -81,7 +90,7 @@ export default function ChatSidebar() {
       console.error("Backend offline:", error);
       setMessages(prev => {
         const updated = [...prev];
-        updated[updated.length - 1] = { role: 'assistant', text: 'Connected locally, but cannot reach the AI brain. Ensure Terminal 2 (FastAPI) is running!' };
+        updated[updated.length - 1] = { role: 'assistant', text: 'Connected locally, but cannot reach the AI brain. Ensure the FastAPI Backend terminal is running!' };
         return updated;
       });
     }

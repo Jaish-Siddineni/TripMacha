@@ -1,92 +1,93 @@
-# from playwright.async_api import async_playwright
-# import random
-
-# # Rotate these so sites don't see the exact same browser every time
-# USER_AGENTS = [
-#     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-#     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
-# ]
-
-# async def get_stealth_browser_content(url: str, wait_for_selector: str = None) -> str:
-#     """
-#     Opens a headless browser, bypasses basic bot detection, and returns the raw HTML.
-#     """
-#     async with async_playwright() as p:
-#         browser = await p.chromium.launch(
-#             headless=True,
-#             args=["--disable-blink-features=AutomationControlled"] # Helps bypass bot detection
-#         )
-        
-#         context = await browser.new_context(
-#             user_agent=random.choice(USER_AGENTS),
-#             viewport={'width': 1920, 'height': 1080}
-#         )
-        
-#         page = await context.new_page()
-        
-#         # Adding a realistic timeout and wait state
-#         await page.goto(url, wait_until="domcontentloaded", timeout=60000)
-        
-#         if wait_for_selector:
-#             await page.wait_for_selector(wait_for_selector, timeout=15000)
-            
-#         html_content = await page.content()
-#         await browser.close()
-        
-#         return html_content
-
 from playwright.async_api import async_playwright
 import random
+import os
+import shutil
+import re
 
-# Rotate these so sites don't see the exact same browser every time
 USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
 ]
 
 async def get_stealth_browser_content(url: str, wait_for_selector: str = None) -> str:
     """
-    Opens a headless browser, bypasses basic bot detection, waits for SPA data to load, 
-    and returns the raw HTML.
+    Launches a native persistent browser context to completely mask automation flags.
+    Handles popups cleanly and ensures content is fully loaded before passing to Gemini.
     """
+    # Create a unique profile directory for this worker run to avoid session locks
+    profile_dir = os.path.join(os.getcwd(), f"browser_profiles/user_profile_{random.randint(1000, 9999)}")
+    
     try:
         async with async_playwright() as p:
-            browser = await p.chromium.launch(
-                headless=True,
-                args=["--disable-blink-features=AutomationControlled"]
-            )
-            
-            context = await browser.new_context(
+            # Using launch_persistent_context strips away standard "AutomationControlled" flags natively
+            context = await p.chromium.launch_persistent_context(
+                user_data_dir=profile_dir,
+                headless=True,  # Changed to True for headless Docker execution environment
+                no_viewport=False,
+                viewport={'width': 1366, 'height': 768},
                 user_agent=random.choice(USER_AGENTS),
-                viewport={'width': 1920, 'height': 1080}
+                ignore_default_args=["--enable-automation"], 
+                args=[
+                    "--no-sandbox",                  # Crucial for Linux/Docker execution privilege management
+                    "--disable-setuid-sandbox",       # Disables sandbox issues inside root containers
+                    "--disable-dev-shm-usage",       # Prevents memory resource exhaustion crashes inside shared memory (/dev/shm)
+                    "--disable-blink-features=AutomationControlled",
+                    "--start-maximized",
+                    "--disable-infobars"
+                ]
             )
             
-            page = await context.new_page()
+            page = context.pages[0] if context.pages else await context.new_page()
             
-            # 1. Wait just for the basic page frame to load, so it doesn't timeout
-            await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+            # Navigate with a generous timeout to handle slow initial hops
+            print(f"[Scraper] Navigating to: {url}")
+            await page.goto(url, wait_until="commit", timeout=60000)
+            
+            # Wait a few seconds for the layout to stabilize
+            await page.wait_for_timeout(5000)
+            
+            # --- CLEAR INTERSTITIALS / POPUPS ---
+            await page.keyboard.press("Escape")
+            
+            popup_selectors = [
+                ".commonModal__close", 
+                "button[aria-label='Dismiss sign-in info.']",
+                "span.bgProperties.close"
+            ]
+            
+            for selector in popup_selectors:
+                try:
+                    element = page.locator(selector)
+                    if await element.is_visible(timeout=1000):
+                        await element.click()
+                        await page.wait_for_timeout(1000)
+                except Exception:
+                    continue
 
-            # 2. Let our hard pause wait for Cleartrip's internal APIs to populate the flights
-            await page.wait_for_timeout(8000) # Let's bump this to 8 seconds just to be safe on Cleartrip!
+            # Critical wait time for Single Page Applications (SPAs) to populate cards
+            print("[Scraper] Waiting for pricing elements to render...")
+            await page.wait_for_timeout(7000)
             
-            # Take a photo of whatever is on the screen!
-            await page.screenshot(path="debug_screenshot.png", full_page=True)
-            
-            # 3. If you pass a specific flight card class/ID, it will wait for that explicitly
-            if wait_for_selector:
-                await page.wait_for_selector(wait_for_selector, timeout=15000)
+            # Take a safety screenshot to confirm what the page shows before capturing
+            try:
+                await page.screenshot(path="debug_screenshot.png")
+            except Exception as e:
+                print(f"[Warning] Could not capture screenshot: {e}")
                 
-            html_content = await page.content()
+            visible_text = await page.evaluate("document.body.innerText")
             
-            # 4. DEBUGGING: Save the HTML to a file so you can see what Gemini sees
-            with open("debug_page.html", "w", encoding="utf-8") as f:
-                f.write(html_content)
-                
-            await browser.close()
-            
-            return html_content
-            
+            compressed_text = re.sub(r'\n+', ' | ', visible_text).strip()
+        
+            return compressed_text
+
     except Exception as e:
-        # Catch and print the exact error to the backend terminal
         print(f"\n--- SCRAPER CRASHED --- \nReason: {str(e)}\n-----------------------\n")
         raise e
+        
+    finally:
+        # Clean up the temporary profile folder to save disk space
+        if os.path.exists(profile_dir):
+            try:
+                shutil.rmtree(profile_dir)
+            except Exception:
+                pass
