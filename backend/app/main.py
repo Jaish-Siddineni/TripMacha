@@ -9,7 +9,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Standard list for localhost and your exact known URLs
 allowed_origins = [
     "http://localhost:5173",  
     "http://localhost:3000",  
@@ -24,14 +23,15 @@ if FRONTEND_URL and FRONTEND_URL not in allowed_origins:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=r"https://.*.vercel.app", # <--- THE MAGIC BULLET (Allows all Vercel preview links)
+    allow_origin_regex=r"https://.*\.vercel\.app", 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(routes_chat.router, prefix="/api", tags=["AI Co-Pilot"])
-app.include_router(routes_scraping.router, prefix="/api", tags=["Task Queue"])
+# THE FIX: Added /chat and /scrape back to the prefixes!
+app.include_router(routes_chat.router, prefix="/api/chat", tags=["AI Co-Pilot"])
+app.include_router(routes_scraping.router, prefix="/api/scrape", tags=["Task Queue"])
 
 @app.get("/health")
 def health_check():
