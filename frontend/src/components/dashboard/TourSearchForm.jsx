@@ -22,7 +22,7 @@ export default function TourSearchForm({ onDataScraped, onSearchStart }) {
         guests: formData.guests
       });
 
-      const triggerRes = await fetch(`http://localhost:8000/api/scrape/trigger-search?${queryParams.toString()}`, { 
+      const triggerRes = await fetch(`https://elated-quickly-degraded.ngrok-free.dev/api/scrape/trigger-search?${queryParams.toString()}`, { 
         method: 'POST' 
       });
       
@@ -33,7 +33,7 @@ export default function TourSearchForm({ onDataScraped, onSearchStart }) {
 
       const pollInterval = setInterval(async () => {
         try {
-          const statusRes = await fetch(`http://localhost:8000/api/scrape/status/${taskId}`);
+          const statusRes = await fetch(`https://elated-quickly-degraded.ngrok-free.dev/api/scrape/status/${taskId}`);
           const statusData = await statusRes.json();
 
           if (statusData.status === 'completed') {

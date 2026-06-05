@@ -59,7 +59,7 @@ export default function UniversalSearchWidget({ onDataScraped, onSearchModeChang
           : `mode=${activeMode}&origin=${origin}&destination=${destination}&date=${startDate}`;
       }
 
-      const scrapeResponse = await fetch(`http://localhost:8000/api/scrape/trigger-search?${queryParams}`, { 
+      const scrapeResponse = await fetch(`https://elated-quickly-degraded.ngrok-free.dev/api/scrape/trigger-search?${queryParams}`, { 
         method: "POST",
         headers: { "Content-Type": "application/json" }
       });
@@ -68,7 +68,7 @@ export default function UniversalSearchWidget({ onDataScraped, onSearchModeChang
 
       const checkStatus = setInterval(async () => {
         try {
-          const statusRes = await fetch(`http://localhost:8000/api/scrape/status/${taskData.task_id}`);
+          const statusRes = await fetch(`https://elated-quickly-degraded.ngrok-free.dev/api/scrape/status/${taskData.task_id}`);
           const statusData = await statusRes.json();
           
           if (statusData.status === "completed") {

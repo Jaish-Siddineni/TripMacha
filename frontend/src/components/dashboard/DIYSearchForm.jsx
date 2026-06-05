@@ -29,8 +29,8 @@ export default function DIYSearchForm({ onDataScraped, onSearchStart }) {
         budget: formData.budget
       });
 
-      // 3. Trigger the Celery Master Task
-      const triggerRes = await fetch(`http://localhost:8000/api/scrape/trigger-search?${queryParams.toString()}`, { 
+      // 3. Trigger the Celery Master Task using Ngrok
+      const triggerRes = await fetch(`https://elated-quickly-degraded.ngrok-free.dev/api/scrape/trigger-search?${queryParams.toString()}`, { 
         method: 'POST' 
       });
       
@@ -39,16 +39,16 @@ export default function DIYSearchForm({ onDataScraped, onSearchStart }) {
 
       const taskId = triggerData.task_id;
 
-      // 4. Poll the backend every 3 seconds until Gemini finishes building the package
+      // 4. Poll the backend every 3 seconds until AI finishes building the package
       const pollInterval = setInterval(async () => {
         try {
-          const statusRes = await fetch(`http://localhost:8000/api/scrape/status/${taskId}`);
+          const statusRes = await fetch(`https://elated-quickly-degraded.ngrok-free.dev/api/scrape/status/${taskId}`);
           const statusData = await statusRes.json();
 
           if (statusData.status === 'completed') {
             clearInterval(pollInterval);
             
-            // Parse the JSON string from Gemini into a real JS object
+            // Parse the JSON string from AI into a real JS object
             let parsedData = statusData.data;
             if (typeof parsedData === 'string') {
               try {
