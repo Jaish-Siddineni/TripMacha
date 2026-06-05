@@ -29,9 +29,12 @@ export default function DIYSearchForm({ onDataScraped, onSearchStart }) {
         budget: formData.budget
       });
 
-      // 3. Trigger the Celery Master Task using Ngrok
+      // 3. Trigger the Celery Master Task using Ngrok (WITH NGROK BYPASS HEADERS)
       const triggerRes = await fetch(`https://elated-quickly-degraded.ngrok-free.dev/api/scrape/trigger-search?${queryParams.toString()}`, { 
-        method: 'POST' 
+        method: 'POST',
+        headers: {
+          "ngrok-skip-browser-warning": "true"
+        }
       });
       
       const triggerData = await triggerRes.json();
@@ -42,7 +45,12 @@ export default function DIYSearchForm({ onDataScraped, onSearchStart }) {
       // 4. Poll the backend every 3 seconds until AI finishes building the package
       const pollInterval = setInterval(async () => {
         try {
-          const statusRes = await fetch(`https://elated-quickly-degraded.ngrok-free.dev/api/scrape/status/${taskId}`);
+          // ADDED NGROK BYPASS HEADERS HERE TOO
+          const statusRes = await fetch(`https://elated-quickly-degraded.ngrok-free.dev/api/scrape/status/${taskId}`, {
+            headers: {
+              "ngrok-skip-browser-warning": "true"
+            }
+          });
           const statusData = await statusRes.json();
 
           if (statusData.status === 'completed') {

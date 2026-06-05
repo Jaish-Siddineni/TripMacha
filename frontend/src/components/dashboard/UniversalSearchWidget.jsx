@@ -5,19 +5,15 @@ import {
 } from 'lucide-react';
 
 export default function UniversalSearchWidget({ onDataScraped, onSearchModeChange }) {
-  // Master Strategy Toggle: 'diy' (Flights, Hotels, etc.) vs 'tours' (Pre-made Full Packages)
   const [bookingType, setBookingType] = useState('diy');
   
-  // Transport & General State
   const [activeMode, setActiveMode] = useState('flights');
   const [origin, setOrigin] = useState('BLR');
   const [destination, setDestination] = useState('DEL');
   
-  // Accommodation & Package Specific State
   const [hotelCity, setHotelCity] = useState('Manali');
   const [guests, setGuests] = useState(2);
 
-  // Default Calendar Windows
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const dayAfter = new Date();
@@ -59,16 +55,25 @@ export default function UniversalSearchWidget({ onDataScraped, onSearchModeChang
           : `mode=${activeMode}&origin=${origin}&destination=${destination}&date=${startDate}`;
       }
 
+      // 1. ADDED NGROK BYPASS HEADERS HERE
       const scrapeResponse = await fetch(`https://elated-quickly-degraded.ngrok-free.dev/api/scrape/trigger-search?${queryParams}`, { 
         method: "POST",
-        headers: { "Content-Type": "application/json" }
+        headers: { 
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true" 
+        }
       });
       
       const taskData = await scrapeResponse.json();
 
       const checkStatus = setInterval(async () => {
         try {
-          const statusRes = await fetch(`https://elated-quickly-degraded.ngrok-free.dev/api/scrape/status/${taskData.task_id}`);
+          // 2. ADDED NGROK BYPASS HEADERS HERE
+          const statusRes = await fetch(`https://elated-quickly-degraded.ngrok-free.dev/api/scrape/status/${taskData.task_id}`, {
+            headers: {
+              "ngrok-skip-browser-warning": "true"
+            }
+          });
           const statusData = await statusRes.json();
           
           if (statusData.status === "completed") {
