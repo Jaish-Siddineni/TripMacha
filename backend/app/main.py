@@ -9,16 +9,17 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Fetch allowed origins from system environment variables
-# In production, this will be your deployed frontend URL (e.g., https://tripmacha.vercel.app)
+# 1. HARDCODE YOUR VERCEL URL HERE FOR NOW
+# Relying on os.getenv() for the frontend URL can be tricky during local Docker testing 
+# if the .env file isn't perfectly mapped. Hardcoding it guarantees it works right now.
 allowed_origins = [
     "http://localhost:5173",  # Vite local fallback
     "http://localhost:3000",  # Create React App local fallback
+    "https://trip-macha.vercel.app", # <--- REPLACE WITH YOUR EXACT VERCEL URL
 ]
 
-# If a production frontend URL environment variable is set, append it dynamically
 FRONTEND_URL = os.getenv("FRONTEND_URL")
-if FRONTEND_URL:
+if FRONTEND_URL and FRONTEND_URL not in allowed_origins:
     allowed_origins.append(FRONTEND_URL)
 
 app.add_middleware(
@@ -29,9 +30,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register the different route files
-app.include_router(routes_chat.router, prefix="/api/chat", tags=["AI Co-Pilot"])
-app.include_router(routes_scraping.router, prefix="/api/scrape", tags=["Task Queue"])
+# 2. WATCH YOUR ROUTE PREFIXES!
+# Your JavaScript frontend is trying to call: /api/plan-trip
+# If we leave prefix="/api/chat", your backend will only listen at: /api/chat/plan-trip
+# I have changed the prefix to "/api" so it matches your frontend exactly.
+app.include_router(routes_chat.router, prefix="/api", tags=["AI Co-Pilot"])
+app.include_router(routes_scraping.router, prefix="/api", tags=["Task Queue"])
 
 @app.get("/health")
 def health_check():

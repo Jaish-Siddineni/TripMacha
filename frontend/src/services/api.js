@@ -1,8 +1,7 @@
 import axios from 'axios';
 
-// Dynamically sets the base URL based on your deployment environment (.env file)
-// Falls back to localhost:8000 if no environment variable is found
-const BASE_HOST = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+// Temporarily hardcoding the Ngrok tunnel for live testing
+const BASE_HOST = 'https://elated-quickly-degraded.ngrok-free.dev';
 const API_BASE_URL = `${BASE_HOST}/api`;
 
 export const travelApi = {

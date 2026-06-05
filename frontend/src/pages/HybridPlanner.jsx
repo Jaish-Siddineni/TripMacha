@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from "jwt-decode";
-import LiveComparisonDashboard from '../components/Dashboard/LiveComparisonDashboard';
+import LiveComparisonDashboard from '../components/dashboard/LiveComparisonDashboard.jsx';
 import { Sparkles, ArrowRight, Layers, Hammer } from 'lucide-react';
-import DIYSearchForm from '../components/Dashboard/DIYSearchForm';
-import TourSearchForm from '../components/Dashboard/TourSearchForm';
-import TripMachaLogo from '../components/TripMachaLogo'; // Imported Custom Logo
+import DIYSearchForm from '../components/dashboard/DIYSearchForm.jsx';
+import TourSearchForm from '../components/dashboard/TourSearchForm.jsx';
+import TripMachaLogo from '../components/TripMachaLogo.jsx'; // Imported Custom Logo
 
 export default function HybridPlanner() {
   const [scrapedData, setScrapedData] = useState(null);
